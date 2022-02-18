@@ -22,6 +22,9 @@ class HtmlWebSocketChannel extends StreamChannelMixin
   String? get protocol => _webSocket.protocol;
 
   @override
+  int? get readyState => _webSocket.readyState;
+
+  @override
   int? get closeCode => _closeCode;
   int? _closeCode;
 
@@ -52,12 +55,6 @@ class HtmlWebSocketChannel extends StreamChannelMixin
 
   @override
   late final WebSocketSink sink = _HtmlWebSocketSink(this);
-
-  /// The underlying [WebSocket], if this channel has connected.
-  ///
-  /// If the future returned from [WebSocket.connect] has not yet completed, or
-  /// completed as an error, this will be null.
-  WebSocket get innerWebSocket => _webSocket;
 
   /// Creates a new WebSocket connection.
   ///

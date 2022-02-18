@@ -25,6 +25,9 @@ class IOWebSocketChannel extends StreamChannelMixin
   String? get protocol => _webSocket?.protocol;
 
   @override
+  int? get readyState => _webSocket?.readyState;
+
+  @override
   int? get closeCode => _webSocket?.closeCode;
 
   @override

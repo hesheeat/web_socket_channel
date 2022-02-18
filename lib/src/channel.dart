@@ -37,6 +37,8 @@ class WebSocketChannel extends StreamChannelMixin {
   /// the server. If no subprotocol is negotiated the value will remain `null`.
   String? get protocol => _webSocket.protocol;
 
+  int? get readyState => _webSocket.readyState;
+
   /// The [close code][] set when the WebSocket connection is closed.
   ///
   /// [close code]: https://tools.ietf.org/html/rfc6455#section-7.1.5
