@@ -68,18 +68,24 @@ class HtmlWebSocketChannel extends StreamChannelMixin
   /// binary messages to be delivered as [Uint8List]s. If it's
   /// [BinaryType.blob], they're delivered as [Blob]s instead.
   HtmlWebSocketChannel.connect(url,
-      {Iterable<String>? protocols, BinaryType? binaryType})
-      : this(WebSocket(url.toString(), protocols)
-          ..binaryType = (binaryType ?? BinaryType.list).value);
+      {Iterable<String>? protocols,
+      BinaryType? binaryType,
+      ConnectCallback? onConnect})
+      : this(
+            WebSocket(url.toString(), protocols)
+              ..binaryType = (binaryType ?? BinaryType.list).value,
+            onConnect: onConnect);
 
   /// Creates a channel wrapping [_webSocket].
-  HtmlWebSocketChannel(this._webSocket) {
+  HtmlWebSocketChannel(this._webSocket, {ConnectCallback? onConnect}) {
     if (_webSocket.readyState == WebSocket.OPEN) {
+      onConnect?.call();
       _listen();
     } else {
       // The socket API guarantees that only a single open event will be
       // emitted.
       _webSocket.onOpen.first.then((_) {
+        onConnect?.call();
         _listen();
       });
     }
