@@ -25,13 +25,18 @@ class IOWebSocketChannel extends StreamChannelMixin
   String? get protocol => _webSocket?.protocol;
 
   @override
-  int? get readyState => _webSocket?.readyState;
-
-  @override
   int? get closeCode => _webSocket?.closeCode;
 
   @override
   String? get closeReason => _webSocket?.closeReason;
+
+  /// Future indicating if the connection has been established.
+  /// It completes on successful connection to the websocket.
+  @override
+  Future get ready => _readyCompleter.future;
+
+  /// Completer for [ready].
+  final Completer _readyCompleter = Completer.sync();
 
   @override
   final Stream stream;
@@ -64,20 +69,26 @@ class IOWebSocketChannel extends StreamChannelMixin
       {Iterable<String>? protocols,
       Map<String, dynamic>? headers,
       Duration? pingInterval,
-      ConnectCallback? onConnect}) {
+      Duration? connectTimeout}) {
     late IOWebSocketChannel channel;
     final sinkCompleter = WebSocketSinkCompleter();
+    var webSocketFuture = WebSocket.connect(url.toString(),
+        headers: headers, protocols: protocols);
+    if (connectTimeout != null) {
+      webSocketFuture = webSocketFuture.timeout(connectTimeout,
+          onTimeout: () =>
+              throw WebSocketTimeoutException('WebSocket timeouted'));
+    }
     final stream = StreamCompleter.fromFuture(
-      WebSocket.connect(url.toString(), headers: headers, protocols: protocols)
-          .then((webSocket) {
+      webSocketFuture.then((webSocket) {
         webSocket.pingInterval = pingInterval;
         channel._webSocket = webSocket;
+        channel._readyCompleter.complete();
         sinkCompleter.setDestinationSink(_IOWebSocketSink(webSocket));
-        onConnect?.call();
         return webSocket;
-      }).catchError(
-        (Object error) => throw WebSocketChannelException.from(error),
-      ),
+      }).catchError((Object error) {
+        channel._readyCompleter.completeError(error);
+      }),
     );
 
     return channel =

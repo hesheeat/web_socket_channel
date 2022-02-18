@@ -22,15 +22,20 @@ class HtmlWebSocketChannel extends StreamChannelMixin
   String? get protocol => _webSocket.protocol;
 
   @override
-  int? get readyState => _webSocket.readyState;
-
-  @override
   int? get closeCode => _closeCode;
   int? _closeCode;
 
   @override
   String? get closeReason => _closeReason;
   String? _closeReason;
+
+  /// Future indicating if the connection has been established.
+  /// It completes on successful connection to the websocket.
+  @override
+  Future get ready => _readyCompleter.future;
+
+  /// Completer for [ready].
+  final Completer _readyCompleter = Completer.sync();
 
   /// The number of bytes of data that have been queued but not yet transmitted
   /// to the network.
@@ -70,23 +75,36 @@ class HtmlWebSocketChannel extends StreamChannelMixin
   HtmlWebSocketChannel.connect(url,
       {Iterable<String>? protocols,
       BinaryType? binaryType,
-      ConnectCallback? onConnect})
+      Duration? connectTimeout})
       : this(
             WebSocket(url.toString(), protocols)
               ..binaryType = (binaryType ?? BinaryType.list).value,
-            onConnect: onConnect);
+            connectTimeout: connectTimeout);
 
   /// Creates a channel wrapping [_webSocket].
-  HtmlWebSocketChannel(this._webSocket, {ConnectCallback? onConnect}) {
+  HtmlWebSocketChannel(this._webSocket, {Duration? connectTimeout}) {
     if (_webSocket.readyState == WebSocket.OPEN) {
-      onConnect?.call();
+      _readyCompleter.complete();
       _listen();
     } else {
       // The socket API guarantees that only a single open event will be
       // emitted.
       _webSocket.onOpen.first.then((_) {
-        onConnect?.call();
-        _listen();
+        if (!_readyCompleter.isCompleted) {
+          _readyCompleter.complete();
+          _listen();
+        } else {
+          _webSocket.close();
+        }
+      });
+    }
+
+    if (connectTimeout != null) {
+      Future.delayed(connectTimeout, () {
+        if (!_readyCompleter.isCompleted) {
+          _readyCompleter
+              .completeError(WebSocketTimeoutException('WebSocket timeouted'));
+        }
       });
     }
 

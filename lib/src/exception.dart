@@ -20,3 +20,8 @@ class WebSocketChannelException implements Exception {
       ? 'WebSocketChannelException'
       : 'WebSocketChannelException: $message';
 }
+
+class WebSocketTimeoutException implements Exception {
+  final String? message;
+  WebSocketTimeoutException([this.message]);
+}
